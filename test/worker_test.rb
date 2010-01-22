@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/test_helper'
 
 context "Resque::Worker" do
   setup do
-    Resque.redis.flush_all
+    Resque.drop
 
     @worker = Resque::Worker.new(:jobs)
     Resque::Job.create(:jobs, SomeJob, 20, '/tmp')
@@ -17,8 +17,8 @@ context "Resque::Worker" do
   test "can peek at failed jobs" do
     10.times { Resque::Job.create(:jobs, BadJob) }
     @worker.work(0)
-    assert_equal 10, Resque::Failure.count
 
+    assert_equal 10, Resque::Failure.count
     assert_equal 10, Resque::Failure.all(0, 20).size
   end
 

@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/test_helper'
 
 context "Resque" do
   setup do
-    Resque.redis.flush_all
+    Resque.drop
 
     Resque.push(:people, { 'name' => 'chris' })
     Resque.push(:people, { 'name' => 'bob' })
@@ -137,7 +137,7 @@ context "Resque" do
   end
 
   test "queues are always a list" do
-    Resque.redis.flush_all
+    Resque.drop
     assert_equal [], Resque.queues
   end
 
@@ -150,7 +150,7 @@ context "Resque" do
   end
 
   test "keeps track of resque keys" do
-    assert_equal ["queue:people", "queues"], Resque.keys
+    assert_equal ["people"], Resque.keys
   end
 
   test "badly wants a class name, too" do
@@ -159,7 +159,7 @@ context "Resque" do
     end
   end
 
-  test "keeps stats" do
+   test "keeps stats" do
     Resque::Job.create(:jobs, SomeJob, 20, '/tmp')
     Resque::Job.create(:jobs, BadJob)
     Resque::Job.create(:jobs, GoodJob)
@@ -183,9 +183,9 @@ context "Resque" do
     @worker.done_working
 
     stats = Resque.info
-    assert_equal 3, stats[:queues]
+    assert_equal 2, stats[:queues]
     assert_equal 3, stats[:processed]
     assert_equal 1, stats[:failed]
-    assert_equal ['localhost:9736'], stats[:servers]
+    assert_equal ['localhost:27017'], stats[:servers]
   end
 end

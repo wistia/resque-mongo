@@ -1,3 +1,21 @@
+Resque-mongo
+============
+Resque-mongo is a fork of [Resque][resque] that uses MongoDB as a
+backend instead of Redis. This fork is a work in progress, all the
+library functionality has been ported (all tests pass) and the
+monitoring sinatra app works except the "stats" panel, although there are
+a lot of details that need to been taken care of.
+
+Resque-mongo uses a fairly new feature of mongo, [findAndModify()][fnr].
+findAndModify is not yet supported by the ruby mongo driver because the
+command's api might change a bit. You can use a [patched version
+mongo-ruby-driver][fnr-ruby] that supports the current implementation.
+
+Also, check your mongo version: 1.3.0 or higher
+
+[fnr]: http://www.mongodb.org/display/DOCS/findandmodify+Command 
+[fnr-ruby]: http://github.com/ctrochalakis/mongo-ruby-driver/tree/find_replace
+
 Resque
 ======
 
@@ -734,3 +752,4 @@ Chris Wanstrath :: chris@ozmm.org :: @defunkt
 [1]: http://help.github.com/forking/
 [2]: http://github.com/defunkt/resque/issues
 [sv]: http://semver.org/
+[resque]: http://github.com/defunct/resque

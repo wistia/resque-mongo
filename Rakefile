@@ -30,16 +30,15 @@ begin
   require 'resque/version'
 
   Jeweler::Tasks.new do |gemspec|
-    gemspec.name = "resque"
+    gemspec.name = "resque-mongo"
     gemspec.summary = ""
     gemspec.description = ""
-    gemspec.email = "chris@ozmm.org"
-    gemspec.homepage = "http://github.com/defunkt/resque"
-    gemspec.authors = ["Chris Wanstrath"]
+    gemspec.email = "yatiohi@ideopolis.gr"
+    gemspec.homepage = "http://github.com/ctrochalakis/resque-mongo"
+    gemspec.authors = ["Christos Trochalakis"]
     gemspec.version = Resque::Version
 
-    gemspec.add_dependency "redis"
-    gemspec.add_dependency "redis-namespace"
+    gemspec.add_dependency "mongo"
     gemspec.add_dependency "vegas", ">=0.1.2"
     gemspec.add_dependency "sinatra", ">=0.9.2"
     gemspec.add_development_dependency "jeweler"
@@ -60,7 +59,7 @@ task :publish => [ :test, :gemspec, :build ] do
   system "git tag v#{Resque::Version}"
   system "git push origin v#{Resque::Version}"
   system "git push origin master"
-  system "gem push pkg/resque-#{Resque::Version}.gem"
+  system "gem push pkg/resque-mongo-#{Resque::Version}.gem"
   system "git clean -fd"
   exec "rake pages"
 end

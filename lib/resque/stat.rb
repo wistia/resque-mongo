@@ -11,7 +11,9 @@ module Resque
 
     # Returns the int value of a stat, given a string stat name.
     def get(stat)
-      redis.get("stat:#{stat}").to_i
+      res = mongo_stats.find_one(:stat => stat)
+      return 0 unless res
+      res['value'].to_i
     end
 
     # Alias of `get`
@@ -24,7 +26,7 @@ module Resque
     # Can optionally accept a second int parameter. The stat is then
     # incremented by that amount.
     def incr(stat, by = 1)
-      redis.incr("stat:#{stat}", by)
+      mongo_stats.update({:stat => stat}, {'$inc' => {:value => by}}, :upsert => true)
     end
 
     # Increments a stat by one.
@@ -37,7 +39,7 @@ module Resque
     # Can optionally accept a second int parameter. The stat is then
     # decremented by that amount.
     def decr(stat, by = 1)
-      redis.decr("stat:#{stat}", by)
+      mongo_stats.update({:stat => stat}, {'$inc' => {:value => -by}})
     end
 
     # Decrements a stat by one.
@@ -47,7 +49,7 @@ module Resque
 
     # Removes a stat from Redis, effectively setting it to 0.
     def clear(stat)
-      redis.del("stat:#{stat}")
+      mongo_stats.remove(:stat => stat)
     end
   end
 end

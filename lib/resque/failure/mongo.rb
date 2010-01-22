@@ -1,8 +1,8 @@
 module Resque
   module Failure
-    # A Failure backend that stores exceptions in Redis. Very simple but
+    # A Failure backend that stores exceptions in Mongo. Very simple but
     # works out of the box, along with support in the Resque web app.
-    class Redis < Base
+    class Mongo < Base
       def save
         data = {
           :failed_at => Time.now.strftime("%Y/%m/%d %H:%M:%S"),
@@ -12,20 +12,19 @@ module Resque
           :worker    => worker.to_s,
           :queue     => queue
         }
-        data = Resque.encode(data)
-        Resque.redis.rpush(:failed, data)
+        Resque.mongo_failures << data
       end
 
       def self.count
-        Resque.redis.llen(:failed).to_i
+        Resque.mongo_failures.count
       end
 
       def self.all(start = 0, count = 1)
-        Resque.list_range(:failed, start, count)
+        Resque.mongo_failures.find().sort([:natural, :desc]).skip(start).limit(count).to_a
       end
       
       def self.clear
-        Resque.redis.delete('resque:failed')
+        Resque.mongo_failures.remove
       end
       
     end
