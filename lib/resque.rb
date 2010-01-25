@@ -25,7 +25,7 @@ module Resque
     case server
     when String
       host, port = server.split(':')
-      @con = Mongo::Connection.new
+      @con = Mongo::Connection.new(host, port)
       @db = @con.db('monque')
       @mongo = @db.collection('monque')
       @workers = @db.collection('workers')
