@@ -293,8 +293,6 @@ module Resque
 
     # Unregisters ourself as a worker. Useful when shutting down.
     def unregister_worker
-      done_working
-
       redis.srem(:workers, self)
       redis.del("worker:#{self}:started")
 
