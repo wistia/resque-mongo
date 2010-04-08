@@ -11,7 +11,12 @@ findAndModify that is only supported by 0.20+ version ofthe ruby mongo driver.
 
 Also, check your mongo version: 1.3.0 or higher
 
-[fnr]: http://www.mongodb.org/display/DOCS/findandmodify+Command 
+[fnr]: http://www.mongodb.org/display/DOCS/findandmodify+Command
+
+    gem install resque-mongo
+    # Rails integration, config/environment.rb
+    config.gem 'resque-mongo', :lib => 'resque'
+
 
 Resque
 ======
