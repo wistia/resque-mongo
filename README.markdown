@@ -7,14 +7,11 @@ monitoring sinatra app works except the "stats" panel, although there are
 a lot of details that need to been taken care of.
 
 Resque-mongo uses a fairly new feature of mongo, [findAndModify()][fnr].
-findAndModify is not yet supported by the ruby mongo driver because the
-command's api might change a bit. You can use a [patched version
-mongo-ruby-driver][fnr-ruby] that supports the current implementation.
+findAndModify that is only supported by 0.20+ version ofthe ruby mongo driver.
 
 Also, check your mongo version: 1.3.0 or higher
 
 [fnr]: http://www.mongodb.org/display/DOCS/findandmodify+Command 
-[fnr-ruby]: http://github.com/ctrochalakis/mongo-ruby-driver/tree/find_replace
 
 Resque
 ======

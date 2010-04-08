@@ -38,7 +38,7 @@ begin
     gemspec.authors = ["Christos Trochalakis"]
     gemspec.version = Resque::Version
 
-    gemspec.add_dependency "mongo"
+    gemspec.add_dependency "mongo", ">=0.20"
     gemspec.add_dependency "vegas", ">=0.1.2"
     gemspec.add_dependency "sinatra", ">=0.9.2"
     gemspec.add_development_dependency "jeweler"

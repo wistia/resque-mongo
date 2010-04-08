@@ -98,9 +98,9 @@ module Resque
   #
   # Returns a Ruby object.
   def pop(queue)
-    doc = mongo.find_modify( :query => { :queue => queue },
-                             :sort => [:natural, :desc],
-                             :remove => true )
+    doc = mongo.find_and_modify( :query => { :queue => queue },
+                                 :sort => [:natural, :desc],
+                                 :remove => true )
     decode doc['item']
   rescue Mongo::OperationFailure => e
     return nil if e.message =~ /No matching object/
