@@ -425,6 +425,10 @@ the script as the final argument:
 
     $ resque-web -p 8282 rails_root/config/initializers/resque.rb
 
+You can also set the namespace directly using `resque-web`:
+
+    $ resque-web -p 8282 -N myapp
+
 ### Passenger
 
 Using Passenger? Resque ships with a `config.ru` you can use. See
@@ -496,6 +500,8 @@ tool that's best for your app.
 Installing Redis
 ----------------
 
+Resque requires Redis 0.900 or higher.
+
 Resque uses Redis' lists for its queues. It also stores worker state
 data in Redis.
 
@@ -539,6 +545,9 @@ Resque Dependencies
 
 If you cannot install `yajl-ruby` (JRuby?), you can install the `json`
 gem and Resque will use it instead.
+
+When problems arise, make sure you have the newest versions of the
+`redis` and `redis-namespace` gems.
 
 
 Installing Resque
@@ -660,6 +669,17 @@ this way we can tell our Sinatra app about the config file:
 Now everyone is on the same page.
 
 
+Plugins and Hooks
+-----------------
+
+For a list of available plugins see
+<http://wiki.github.com/defunkt/resque/plugins>.
+
+If you'd like to write your own plugin, or want to customize Resque
+using hooks (such as `Resque.after_fork`), see
+[docs/HOOKS.md](http://github.com/defunkt/resque/blob/master/HOOKS.md).
+
+
 Namespaces
 ----------
 
@@ -691,9 +711,17 @@ Try it out by looking at the README, found at `examples/demo/README.markdown`.
 Monitoring
 ----------
 
+### god
+
 If you're using god to monitor Resque, we have provided example
 configs in `examples/god/`. One is for starting / stopping workers,
 the other is for killing workers that have been running too long.
+
+### monit
+
+If you're using monit, `examples/monit/resque.monit` is provided free
+of charge. This is **not** used by GitHub in production, so please
+send patches for any tweaks or improvements you can make to it.
 
 
 Development
@@ -740,13 +768,16 @@ Once you've made your great commits:
 4. Create an [Issue][2] with a link to your branch
 5. That's it!
 
+You might want to checkout our [Contributing][cb] wiki page for information
+on coding standards, new features, etc.
+
 
 Mailing List
 ------------
 
 To join the list simply send an email to <resque@librelist.com>. This
 will subscribe you and send you information about your subscription,
-include unsubscribe information.
+including unsubscribe information.
 
 The archive can be found at <http://librelist.com/browser/>.
 
@@ -775,3 +806,4 @@ Chris Wanstrath :: chris@ozmm.org :: @defunkt
 [2]: http://github.com/defunkt/resque/issues
 [sv]: http://semver.org/
 [rs]: http://github.com/defunkt/redis-namespace
+[cb]: http://wiki.github.com/defunkt/resque/contributing

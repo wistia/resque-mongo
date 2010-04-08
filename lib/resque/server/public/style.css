@@ -8,6 +8,8 @@ body { padding:0; margin:0; }
 .header ul li a:hover { background:#333;}
 .header ul li.current a { background:#429234; font-weight:bold; color:#fff;}
 
+.header .namespace { position: absolute; right: 75px; top: 10px; color: #7A7A7A; }
+
 .subnav { padding:2px 5% 7px 5%; background:#429234; font-size:90%;}
 .subnav li { display:inline;}
 .subnav li a { color:#fff; text-decoration:none; margin-right:10px; display:inline-block; background:#55ad46; padding:5px; -webkit-border-radius:3px; -moz-border-radius:3px;}
@@ -31,6 +33,8 @@ body { padding:0; margin:0; }
 
 #main table.queues { width:40%;}
 #main table.queues td.queue { font-weight:bold; width:50%;}
+#main table.queues tr.failed td { border-top:2px solid; font-size:90%; }
+
 #main table.queues tr.failed td { background:#ebffed; border-top:2px solid #6fd380; font-size:90%; color:#6fd380;}
 #main table.queues tr.failed td a{  color:#6fd380;}
 
@@ -64,6 +68,7 @@ body { padding:0; margin:0; }
 #main ul.failed li {background:-webkit-gradient(linear, left top, left bottom, from(#efefef), to(#fff)) #efefef; margin-top:10px; padding:10px; overflow:hidden; -webkit-border-radius:5px; border:1px solid #ccc; }
 #main ul.failed li dl dt {font-size:80%; color:#999; width:60px; float:left; padding-top:1px; text-align:right;}
 #main ul.failed li dl dd {margin-bottom:10px; margin-left:70px;}
+#main ul.failed li dl dd .retry { float: right; }
 #main ul.failed li dl dd code, #main ul.failed li dl dd pre { font-family:Monaco, "Courier New", monospace; font-size:90%;}
 #main ul.failed li dl dd.error a {font-family:Monaco, "Courier New", monospace; font-size:90%; }
 #main ul.failed li dl dd.error pre { margin-top:3px; line-height:1.3;}
@@ -72,4 +77,6 @@ body { padding:0; margin:0; }
 #main p.pagination a.less { float:left;}
 #main p.pagination a.more { float:right;}
 
-#main form.clear-failed {float:right; margin-top:-10px;}
+#main form {float:right; margin-top:-10px;}
+
+#main .time a.toggle_format {text-decoration:none;}

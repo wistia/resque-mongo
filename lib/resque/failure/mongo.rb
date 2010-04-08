@@ -7,6 +7,7 @@ module Resque
         data = {
           :failed_at => Time.now.strftime("%Y/%m/%d %H:%M:%S"),
           :payload   => payload,
+          :exception => exception.class.to_s,
           :error     => exception.to_s,
           :backtrace => exception.backtrace,
           :worker    => worker.to_s,
@@ -20,13 +21,21 @@ module Resque
       end
 
       def self.all(start = 0, count = 1)
-        Resque.mongo_failures.find().sort([:natural, :desc]).skip(start).limit(count).to_a
+        start, count = [start, count].map { |n| Integer(n) }
+        all_failures = Resque.mongo_failures.find().sort([:natural, :desc]).skip(start).limit(count).to_a
+        all_failures.size == 1 ? all_failures.first : all_failures
       end
       
       def self.clear
         Resque.mongo_failures.remove
       end
       
+      def self.requeue(index)
+        item = all(index)
+        item['retried_at'] = Time.now.strftime("%Y/%m/%d %H:%M:%S")
+        Resque.mongo_failures.update({:_id => item['_id']}, item)
+        Job.create(item['queue'], item['payload']['class'], *item['payload']['args'])
+      end
     end
   end
 end

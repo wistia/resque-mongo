@@ -15,6 +15,10 @@ module Resque
     include Helpers
     extend Helpers
 
+    # Raise Resque::Job::DontPerform from a before_perform hook to
+    # abort the job.
+    DontPerform = Class.new(StandardError)
+
     # The worker object which is currently processing this job.
     attr_accessor :worker
 
@@ -36,7 +40,7 @@ module Resque
     #
     # Raises an exception if no queue or class is given.
     def self.create(queue, klass, *args)
-      if queue.to_s.empty?
+      if !queue
         raise NoQueueError.new("Jobs must be placed onto a queue.")
       end
 
@@ -45,6 +49,50 @@ module Resque
       end
 
       Resque.push(queue, :class => klass.to_s, :args => args)
+    end
+
+    # Removes a job from a queue. Expects a string queue name, a
+    # string class name, and, optionally, args.
+    #
+    # Returns the number of jobs destroyed.
+    #
+    # If no args are provided, it will remove all jobs of the class
+    # provided.
+    #
+    # That is, for these two jobs:
+    #
+    # { 'class' => 'UpdateGraph', 'args' => ['defunkt'] }
+    # { 'class' => 'UpdateGraph', 'args' => ['mojombo'] }
+    #
+    # The following call will remove both:
+    #
+    #   Resque::Job.destroy(queue, 'UpdateGraph')
+    #
+    # Whereas specifying args will only remove the 2nd job:
+    #
+    #   Resque::Job.destroy(queue, 'UpdateGraph', 'mojombo')
+    #
+    # This method can be potentially very slow and memory intensive,
+    # depending on the size of your queue, as it loads all jobs into
+    # a Ruby array before processing.
+    def self.destroy(queue, klass, *args)
+      klass = klass.to_s
+
+      destroyed = 0
+
+      mongo.find(:queue => queue).each do |rec|
+        json   = decode(rec['item'])
+
+        match  = json['class'] == klass
+        match &= json['args'] == args unless args.empty?
+
+        if match
+          destroyed += 1
+          mongo.remove(:_id => rec['_id'])
+        end
+      end
+
+      destroyed
     end
 
     # Given a string queue name, returns an instance of Resque::Job
@@ -58,7 +106,64 @@ module Resque
     # Calls #perform on the class given in the payload with the
     # arguments given in the payload.
     def perform
-      args ? payload_class.perform(*args) : payload_class.perform
+      job = payload_class
+      job_args = args || []
+      job_was_performed = false
+
+      before_hooks  = Plugin.before_hooks(job)
+      around_hooks  = Plugin.around_hooks(job)
+      after_hooks   = Plugin.after_hooks(job)
+      failure_hooks = Plugin.failure_hooks(job)
+
+      begin
+        # Execute before_perform hook. Abort the job gracefully if
+        # Resque::DontPerform is raised.
+        begin
+          before_hooks.each do |hook|
+            job.send(hook, *job_args)
+          end
+        rescue DontPerform
+          return false
+        end
+
+        # Execute the job. Do it in an around_perform hook if available.
+        if around_hooks.empty?
+          job.perform(*job_args)
+          job_was_performed = true
+        else
+          # We want to nest all around_perform plugins, with the last one
+          # finally calling perform
+          stack = around_hooks.reverse.inject(nil) do |last_hook, hook|
+            if last_hook
+              lambda do
+                job.send(hook, *job_args) { last_hook.call }
+              end
+            else
+              lambda do
+                job.send(hook, *job_args) do
+                  job.perform(*job_args)
+                  job_was_performed = true
+                end
+              end
+            end
+          end
+          stack.call
+        end
+
+        # Execute after_perform hook
+        after_hooks.each do |hook|
+          job.send(hook, *job_args)
+        end
+
+        # Return true if the job was performed
+        return job_was_performed
+
+      # If an exception occurs during the job execution, look for an
+      # on_failure hook then re-raise.
+      rescue Object => e
+        failure_hooks.each { |hook| job.send(hook, e, *job_args) }
+        raise e
+      end
     end
 
     # Returns the actual class constant represented in this job's payload.

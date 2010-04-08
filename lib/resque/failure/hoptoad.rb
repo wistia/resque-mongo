@@ -1,5 +1,6 @@
-require 'net/http'
+require 'net/https'
 require 'builder'
+require 'uri'
 
 module Resque
   module Failure
@@ -7,21 +8,26 @@ module Resque
     #
     # To use it, put this code in an initializer, Rake task, or wherever:
     #
+    #   require 'resque/failure/hoptoad'
+    #
     #   Resque::Failure::Hoptoad.configure do |config|
     #     config.api_key = 'blah'
     #     config.secure = true
-    #     config.subdomain = 'your_hoptoad_subdomain'
+    #
+    #     # optional proxy support
+    #     config.proxy_host = 'x.y.z.t'
+    #     config.proxy_port = 8080
+    #
+    #     # server env support, defaults to RAILS_ENV or RACK_ENV
+    #     config.server_environment = "test"
     #   end
     class Hoptoad < Base
-      #from the hoptoad plugin
-      INPUT_FORMAT = %r{^([^:]+):(\d+)(?::in `([^']+)')?$}.freeze
-      
-      class << self
-        attr_accessor :secure, :api_key, :subdomain
-      end
+      # From the hoptoad plugin
+      INPUT_FORMAT = /^([^:]+):(\d+)(?::in `([^']+)')?$/
 
-      def self.url
-        "http://#{subdomain}.hoptoadapp.com/" if subdomain
+      class << self
+        attr_accessor :secure, :api_key, :proxy_host, :proxy_port
+        attr_accessor :server_environment
       end
 
       def self.count
@@ -35,13 +41,12 @@ module Resque
         Resque::Failure.backend = self
       end
 
-      
-
       def save
         http = use_ssl? ? :https : :http
         url = URI.parse("#{http}://hoptoadapp.com/notifier_api/v2/notices")
 
-        http = Net::HTTP.new(url.host, url.port)
+        request = Net::HTTP::Proxy(self.class.proxy_host, self.class.proxy_port)
+        http = request.new(url.host, url.port)
         headers = {
           'Content-type' => 'text/xml',
           'Accept' => 'text/xml, application/xml'
@@ -49,7 +54,7 @@ module Resque
 
         http.read_timeout = 5 # seconds
         http.open_timeout = 2 # seconds
-        
+
         http.use_ssl = use_ssl?
 
         begin
@@ -66,7 +71,7 @@ module Resque
           log "Hoptoad Failure: #{response.class}\n#{body}"
         end
       end
-      
+
       def xml
         x = Builder::XmlMarkup.new
         x.instruct!
@@ -97,16 +102,16 @@ module Resque
             end
           end
           x.tag!("server-environment") do
-            x.tag!("environment-name",RAILS_ENV)
+            x.tag!("environment-name",server_environment)
           end
-          
+
         end
       end
-      
+
       def fill_in_backtrace_lines(x)
         exception.backtrace.each do |unparsed_line|
           _, file, number, method = unparsed_line.match(INPUT_FORMAT).to_a
-          x.line :file=>file,:number=>number
+          x.line :file => file,:number => number
         end
       end
 
@@ -116,6 +121,11 @@ module Resque
 
       def api_key
         self.class.api_key
+      end
+
+      def server_environment
+        return self.class.server_environment if self.class.server_environment
+        defined?(RAILS_ENV) ? RAILS_ENV : (ENV['RACK_ENV'] || 'development')
       end
     end
   end

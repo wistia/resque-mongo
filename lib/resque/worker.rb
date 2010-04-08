@@ -109,26 +109,25 @@ module Resque
 
         if not @paused and job = reserve
           log "got: #{job.inspect}"
+          run_hook :before_fork
+          working_on job
 
           if @child = fork
             rand # Reseeding
-            procline = "resque: Forked #{@child} at #{Time.now.to_i}"
-            $0 = procline
-            log! procline
+            procline "Forked #{@child} at #{Time.now.to_i}"
             Process.wait
           else
-            procline = "resque: Processing #{job.queue} since #{Time.now.to_i}"
-            $0 = procline
-            log! procline
-            process(job, &block)
+            procline "Processing #{job.queue} since #{Time.now.to_i}"
+            perform(job, &block)
             exit! unless @cant_fork
           end
 
+          done_working
           @child = nil
         else
           break if interval.to_i == 0
           log! "Sleeping for #{interval.to_i}"
-          $0 = @paused ? "resque: Paused" : "resque: Waiting for #{@queues.join(',')}"
+          procline @paused ? "Paused" : "Waiting for #{@queues.join(',')}"
           sleep interval.to_i
         end
       end
@@ -137,13 +136,21 @@ module Resque
       unregister_worker
     end
 
-    # Processes a single job. If none is given, it will try to produce
-    # one.
-    def process(job = nil)
+    # DEPRECATED. Processes a single job. If none is given, it will
+    # try to produce one. Usually run in the child.
+    def process(job = nil, &block)
       return unless job ||= reserve
 
+      working_on job
+      perform(job, &block)
+    ensure
+      done_working
+    end
+
+    # Processes a given job in the child.
+    def perform(job)
       begin
-        working_on job
+        run_hook :after_fork, job
         job.perform
       rescue Object => e
         log "#{job.inspect} failed: #{e.inspect}"
@@ -153,7 +160,6 @@ module Resque
         log "done: #{job.inspect}"
       ensure
         yield job if block_given?
-        done_working
       end
     end
 
@@ -203,7 +209,12 @@ module Resque
       enable_gc_optimizations
       register_signal_handlers
       prune_dead_workers
+      run_hook :before_first_fork
       register_worker
+
+      # Fix buffering so we can `rake resque:work > resque.log` and
+      # get output from the child in there.
+      $stdout.sync = true
     end
 
     # Enables GC Optimizations if you're running REE.
@@ -307,8 +318,28 @@ module Resque
       started!
     end
 
+    # Runs a named hook, passing along any arguments.
+    def run_hook(name, *args)
+      return unless hook = Resque.send(name)
+      msg = "Running #{name} hook"
+      msg << " with #{args.inspect}" if args.any?
+      log msg
+
+      args.any? ? hook.call(*args) : hook.call
+    end
+
     # Unregisters ourself as a worker. Useful when shutting down.
     def unregister_worker
+      # If we're still processing a job, make sure it gets logged as a
+      # failure.
+      if (hash = processing) && !hash.empty?
+        job = Job.new(hash['queue'], hash['payload'])
+        # Ensure the proper worker is attached to this job, even if
+        # it's not the precise instance that died.
+        job.worker = self
+        job.fail(DirtyExit.new)
+      end
+
       mongo_workers.remove(:worker => self.to_s)
 
       Stat.clear("processed:#{self}")
@@ -318,13 +349,13 @@ module Resque
     # Given a job, tells Redis we're working on it. Useful for seeing
     # what workers are doing and when.
     def working_on(job)
-      job.worker = self.to_s
+      job.worker = self
       data = encode \
         :queue   => job.queue,
         :run_at  => Time.now.to_s,
       :payload => job.payload
       working_on = {'working_on' => data}
-      mongo_workers.update({:worker => self.to_s},  {'$set' => working_on})
+      mongo_workers.update({:worker => self.to_s},  {'$set' => working_on}, :upsert => true )
     end
 
     # Called when we are done working - clears our `working_on` state
@@ -422,6 +453,14 @@ module Resque
       `ps -A -o pid,command | grep [r]esque`.split("\n").map do |line|
         line.split(' ')[0]
       end
+    end
+
+    # Given a string, sets the procline ($0) and logs.
+    # Procline is always in the format of:
+    #   resque-VERSION: STRING
+    def procline(string)
+      $0 = "resque-#{Resque::Version}: #{string}"
+      log! $0
     end
 
     # Log a message to STDOUT if we are verbose or very_verbose.

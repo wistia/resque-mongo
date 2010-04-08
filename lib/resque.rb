@@ -6,6 +6,8 @@ rescue LoadError
   require 'json'
 end
 
+require 'resque/version'
+
 require 'resque/errors'
 
 require 'resque/failure'
@@ -15,6 +17,7 @@ require 'resque/helpers'
 require 'resque/stat'
 require 'resque/job'
 require 'resque/worker'
+require 'resque/plugin'
 
 module Resque
   include Helpers
@@ -65,6 +68,53 @@ module Resque
     @stats
   end
   
+  # The `before_first_fork` hook will be run in the **parent** process
+  # only once, before forking to run the first job. Be careful- any
+  # changes you make will be permanent for the lifespan of the
+  # worker.
+  #
+  # Call with a block to set the hook.
+  # Call with no arguments to return the hook.
+  def before_first_fork(&block)
+    block ? (@before_first_fork = block) : @before_first_fork
+  end
+
+  # Set a proc that will be called in the parent process before the
+  # worker forks for the first time.
+  def before_first_fork=(before_first_fork)
+    @before_first_fork = before_first_fork
+  end
+
+  # The `before_fork` hook will be run in the **parent** process
+  # before every job, so be careful- any changes you make will be
+  # permanent for the lifespan of the worker.
+  #
+  # Call with a block to set the hook.
+  # Call with no arguments to return the hook.
+  def before_fork(&block)
+    block ? (@before_fork = block) : @before_fork
+  end
+
+  # Set the before_fork proc.
+  def before_fork=(before_fork)
+    @before_fork = before_fork
+  end
+
+  # The `after_fork` hook will be run in the child process and is passed
+  # the current job. Any changes you make, therefor, will only live as
+  # long as the job currently being processes.
+  #
+  # Call with a block to set the hook.
+  # Call with no arguments to return the hook.
+  def after_fork(&block)
+    block ? (@after_fork = block) : @after_fork
+  end
+
+  # Set the after_fork proc.
+  def after_fork=(after_fork)
+    @after_fork = after_fork
+  end
+
   def to_s
     "Mongo Client connected to #{@con.host}"
   end
@@ -122,6 +172,7 @@ module Resque
   # To get the 3rd page of a 30 item, paginatied list one would use:
   #   Resque.peek('my_list', 59, 30)
   def peek(queue, start = 0, count = 1)
+    start, count = [start, count].map { |n| Integer(n) }
     res = mongo.find(:queue => queue).sort([:natural, :desc]).skip(start).limit(count).to_a
     res.collect! { |doc| decode(doc['item']) }
     
@@ -165,13 +216,49 @@ module Resque
   # If either of those conditions are met, it will use the value obtained
   # from performing one of the above operations to determine the queue.
   #
-  # If no queue can be inferred this method will return a non-true value.
+  # If no queue can be inferred this method will raise a `Resque::NoQueueError`
   #
   # This method is considered part of the `stable` API.
   def enqueue(klass, *args)
-    queue = klass.instance_variable_get(:@queue)
-    queue ||= klass.queue if klass.respond_to?(:queue)
-    Job.create(queue, klass, *args)
+    Job.create(queue_from_class(klass), klass, *args)
+  end
+
+  # This method can be used to conveniently remove a job from a queue.
+  # It assumes the class you're passing it is a real Ruby class (not
+  # a string or reference) which either:
+  #
+  #   a) has a @queue ivar set
+  #   b) responds to `queue`
+  #
+  # If either of those conditions are met, it will use the value obtained
+  # from performing one of the above operations to determine the queue.
+  #
+  # If no queue can be inferred this method will raise a `Resque::NoQueueError`
+  #
+  # If no args are given, this method will dequeue *all* jobs matching
+  # the provided class. See `Resque::Job.destroy` for more
+  # information.
+  #
+  # Returns the number of jobs destroyed.
+  #
+  # Example:
+  #
+  #   # Removes all jobs of class `UpdateNetworkGraph`
+  #   Resque.dequeue(GitHub::Jobs::UpdateNetworkGraph)
+  #
+  #   # Removes all jobs of class `UpdateNetworkGraph` with matching args.
+  #   Resque.dequeue(GitHub::Jobs::UpdateNetworkGraph, 'repo:135325')
+  #
+  # This method is considered part of the `stable` API.
+  def dequeue(klass, *args)
+    Job.destroy(queue_from_class(klass), klass, *args)
+  end
+
+  # Given a class, try to extrapolate an appropriate queue based on a
+  # class instance variable or `queue` method.
+  def queue_from_class(klass)
+    klass.instance_variable_get(:@queue) ||
+      (klass.respond_to?(:queue) and klass.queue)
   end
 
   # This method will return a `Resque::Job` object or a non-true value

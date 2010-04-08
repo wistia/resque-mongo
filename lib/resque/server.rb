@@ -20,7 +20,7 @@ module Resque
       end
 
       def current_page
-        url request.path_info.sub('/','').downcase
+        url request.path_info.sub('/','')
       end
 
       def url(*path_parts)
@@ -32,13 +32,14 @@ module Resque
         request.env['SCRIPT_NAME']
       end
 
-      def class_if_current(page = '')
-        'class="current"' if current_page.include? page.to_s
+      def class_if_current(path = '')
+        'class="current"' if current_page[0, path.size] == path
       end
 
       def tab(name)
         dname = name.to_s.downcase
-        "<li #{class_if_current(dname)}><a href='#{url dname}'>#{name}</a></li>"
+        path = url(dname)
+        "<li #{class_if_current(path)}><a href='#{path}'>#{name}</a></li>"
       end
 
       def tabs
@@ -55,19 +56,23 @@ module Resque
           Resque.redis.scard(key)
         when 'string'
           Resque.redis.get(key).length
+        when 'zset'
+          Resque.redis.zcard(key)
         end
       end
 
-      def redis_get_value_as_array(key)
+      def redis_get_value_as_array(key, start=0)
         case Resque.redis.type(key)
         when 'none'
           []
         when 'list'
-          Resque.redis.lrange(key, 0, 20)
+          Resque.redis.lrange(key, start, start + 20)
         when 'set'
-          Resque.redis.smembers(key)
+          Resque.redis.smembers(key)[start..(start + 20)]
         when 'string'
           [Resque.redis.get(key)]
+        when 'zset'
+          Resque.redis.zrange(key, start, start + 20)
         end
       end
 
@@ -85,7 +90,7 @@ module Resque
       ensure
         @partial = false
       end
-      
+
       def poll
         if @polling
           text = "Last Updated: #{Time.now.strftime("%H:%M:%S")}"
@@ -94,14 +99,14 @@ module Resque
         end
         "<p class='poll'>#{text}</p>"
       end
-      
+
     end
 
     def show(page, layout = true)
       begin
         erb page.to_sym, {:layout => layout}, :resque => Resque
       rescue Errno::ECONNREFUSED
-        erb :error, {:layout => false}, :error => "Can't connect to Redis! (#{Resque.redis.server})"
+        erb :error, {:layout => false}, :error => "Can't connect to Mongo! (#{Resque.mongo.server})"
       end
     end
 
@@ -120,6 +125,11 @@ module Resque
       end
     end
     
+    post "/queues/:id/remove" do
+      Resque.remove_queue(params[:id])
+      redirect u('queues')
+    end
+
     %w( overview workers ).each do |page|
       get "/#{page}.poll" do
         content_type "text/plain"
@@ -135,10 +145,19 @@ module Resque
         show :failed
       end
     end
-    
+
     post "/failed/clear" do
       Resque::Failure.clear
       redirect u('failed')
+    end
+    
+    get "/failed/requeue/:index" do
+      Resque::Failure.requeue(params[:index])
+      if request.xhr?
+        return Resque::Failure.all(params[:index])['retried_at']
+      else
+        redirect u('failed')
+      end
     end
 
     get "/stats" do
