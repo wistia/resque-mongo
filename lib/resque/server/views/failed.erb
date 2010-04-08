@@ -1,5 +1,5 @@
 <%start = params[:start].to_i %>
-<%failed = Resque::Failure.all(start, 20)%>
+<%failed = [Resque::Failure.all(start, 20)].flatten %>
 <% index = 0 %>
 
 <h1>Failed Jobs</h1>
