@@ -124,10 +124,10 @@ module Resque
   end
 
   def drop
-    @mongo.drop
-    @workers.drop
-    @failures.drop
-    @stats.drop
+    @mongo.drop if @mongo
+    @workers.drop if @workers
+    @failures.drop if @failures
+    @stats.drop if @stats
     @mongo = nil
   end
   
