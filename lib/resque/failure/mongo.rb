@@ -9,7 +9,7 @@ module Resque
           :payload   => payload,
           :exception => exception.class.to_s,
           :error     => exception.to_s,
-          :backtrace => exception.backtrace,
+          :backtrace => Array(exception.backtrace),
           :worker    => worker.to_s,
           :queue     => queue
         }
@@ -25,11 +25,11 @@ module Resque
         all_failures = Resque.mongo_failures.find().sort([:natural, :desc]).skip(start).limit(count).to_a
         all_failures.size == 1 ? all_failures.first : all_failures
       end
-      
+
       def self.clear
         Resque.mongo_failures.remove
       end
-      
+
       def self.requeue(index)
         item = all(index)
         item['retried_at'] = Time.now.strftime("%Y/%m/%d %H:%M:%S")

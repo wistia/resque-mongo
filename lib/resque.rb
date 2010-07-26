@@ -36,8 +36,6 @@ module Resque
       @stats = @db.collection('stats')
 
       add_indexes
-    else
-      raise "I don't know what to do with #{server.inspect}"
     end
   end
 
@@ -101,8 +99,8 @@ module Resque
   end
 
   # The `after_fork` hook will be run in the child process and is passed
-  # the current job. Any changes you make, therefor, will only live as
-  # long as the job currently being processes.
+  # the current job. Any changes you make, therefore, will only live as
+  # long as the job currently being processed.
   #
   # Call with a block to set the hook.
   # Call with no arguments to return the hook.
@@ -157,7 +155,7 @@ module Resque
     raise e
   end
 
-  # Returns an int representing the size of a queue.
+  # Returns an integer representing the size of a queue.
   # Queue name should be a string.
   def size(queue)
     mongo.find(:queue => queue).count
@@ -305,7 +303,8 @@ module Resque
       :workers   => workers.size.to_i,
       :working   => working.size,
       :failed    => Stat[:failed],
-      :servers   => ["#{@con.host}:#{@con.port}"]
+      :servers   => ["#{@con.host}:#{@con.port}"],
+      :environment  => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
     }
   end
 

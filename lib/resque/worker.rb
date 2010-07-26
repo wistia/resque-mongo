@@ -24,7 +24,7 @@ module Resque
 
     # Returns an array of all worker objects.
     def self.all
-      mongo_workers.distinct(:worker).map { |worker| find(worker) }
+      mongo_workers.distinct(:worker).map { |worker| find(worker) }.compact
     end
 
     # Returns an array of all worker objects currently processing

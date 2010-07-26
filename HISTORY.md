@@ -1,3 +1,73 @@
+## 1.9.8 (2010-07-20)
+
+* Bugfix: Worker.all should never return nil
+* monit example: Fixed Syntax Error and adding environment to the rake task
+* redis rake task: Fixed typo in copy command
+
+## 1.9.7 (2010-07-09)
+
+* Improved memory usage in Job.destroy
+* redis-namespace 0.7.0 now required
+* Bugfix: Reverted $0 changes
+* Web Bugfix: Payload-less failures in the web ui work
+
+## 1.9.6 (2010-06-22)
+
+* Bugfix: Rakefile logging works the same as all the other logging
+
+## 1.9.5 (2010-06-16)
+
+* Web Bugfix: Display the configured namespace on the stats page
+* Revert Bugfix: Make ps -o more cross platform friendly
+
+## 1.9.4 (2010-06-14)
+
+* Bugfix: Multiple failure backend gets exception information when created
+
+## 1.9.3 (2010-06-14)
+
+* Bugfix: Resque#queues always returns an array
+
+## 1.9.2 (2010-06-13)
+
+* Bugfix: Worker.all returning nil fix
+* Bugfix: Make ps -o more cross platform friendly
+
+## 1.9.1 (2010-06-04)
+
+* Less strict JSON dependency
+* Included HISTORY.md in gem
+
+## 1.9.0 (2010-06-04)
+
+* Redis 2 support
+* Depend on redis-namespace 0.5.0
+* Added Resque::VERSION constant (alias of Resque::Version)
+* Bugfix: Specify JSON dependency
+* Bugfix: Hoptoad plugin now works on 1.9
+
+## 1.8.5 (2010-05-18)
+
+* Bugfix: Be more liberal in which Redis clients we accept.
+
+## 1.8.4 (2010-05-18)
+
+* Try to resolve redis-namespace dependency issue
+
+## 1.8.3 (2010-05-17)
+
+* Depend on redis-rb ~> 1.0.7
+
+## 1.8.2 (2010-05-03)
+
+* Bugfix: Include "tasks/" dir in RubyGem
+
+## 1.8.1 (2010-04-29)
+
+* Bugfix: Multiple failure backend did not support requeue-ing failed jobs
+* Bugfix: Fix /failed when error has no backtrace
+* Bugfix: Add `Redis::DistRedis` as a valid client
+
 ## 1.8.0 (2010-04-07)
 
 * Jobs that never complete due to killed worker are now failed.
