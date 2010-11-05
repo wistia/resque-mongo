@@ -139,7 +139,7 @@ module Resque
   # item should be any JSON-able Ruby object.
   def push(queue, item)
     watch_queue(queue)
-    mongo << { :queue => queue.to_s, :item => encode(item) }
+    mongo << { :queue => queue.to_s, :item => item }
   end
 
   # Pops a job off a queue. Queue name should be a string.
@@ -149,7 +149,7 @@ module Resque
     doc = mongo.find_and_modify( :query => { :queue => queue },
                                  :sort => [:natural, :desc],
                                  :remove => true )
-    decode doc['item']
+    doc['item']
   rescue Mongo::OperationFailure => e
     return nil if e.message =~ /No matching object/
     raise e
@@ -172,7 +172,7 @@ module Resque
   def peek(queue, start = 0, count = 1)
     start, count = [start, count].map { |n| Integer(n) }
     res = mongo.find(:queue => queue).sort([:natural, :desc]).skip(start).limit(count).to_a
-    res.collect! { |doc| decode(doc['item']) }
+    res.collect! { |doc| doc['item'] }
     
     if count == 1
       return nil if res.empty?
