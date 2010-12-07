@@ -136,7 +136,7 @@ module Resque
   #
 
   # Pushes a job onto a queue. Queue name should be a string and the
-  # item should be any JSON-able Ruby object.
+  # item should be any BSON-able object
   def push(queue, item)
     watch_queue(queue)
     mongo << { :queue => queue.to_s, :item => item }
@@ -147,7 +147,7 @@ module Resque
   # Returns a Ruby object.
   def pop(queue)
     doc = mongo.find_and_modify( :query => { :queue => queue },
-                                 :sort => [:natural, :desc],
+                                 # :sort => [:natural, :desc],
                                  :remove => true )
     doc['item']
   rescue Mongo::OperationFailure => e
