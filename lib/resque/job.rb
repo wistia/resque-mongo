@@ -81,7 +81,7 @@ module Resque
       destroyed = 0
 
       mongo.find(:queue => queue).each do |rec|
-        json   = decode(rec['item'])
+        json   = rec['item']
 
         match  = json['class'] == klass
         match &= json['args'] == args unless args.empty?
