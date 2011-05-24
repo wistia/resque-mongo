@@ -147,7 +147,6 @@ module Resque
   # Returns a Ruby object.
   def pop(queue)
     doc = mongo.find_and_modify( :query => { :queue => queue },
-                                 # :sort => [:natural, :desc],
                                  :remove => true )
     doc['item']
   rescue Mongo::OperationFailure => e
@@ -171,7 +170,7 @@ module Resque
   #   Resque.peek('my_list', 59, 30)
   def peek(queue, start = 0, count = 1)
     start, count = [start, count].map { |n| Integer(n) }
-    res = mongo.find(:queue => queue).sort([:natural, :desc]).skip(start).limit(count).to_a
+    res = mongo.find(:queue => queue).skip(start).limit(count).to_a
     res.collect! { |doc| doc['item'] }
     
     if count == 1
